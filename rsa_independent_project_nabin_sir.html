@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RSA Chat Simulator with Encryption</title>
+  <style>
+    :root {
+      --bg-dark: #1c1f26;
+      --text-dark: #e0e0e0;
+      --card-dark: #2a2d35;
+      --input-dark: #3a3f4b;
+      --bg-light: #f5f5f5;
+      --text-light: #222;
+      --card-light: #ffffff;
+      --input-light: #f0f0f0;
+      --accent: #00ccff;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-dark);
+      transition: all 0.5s ease;
+    }
+
+    body.light-mode {
+      background: var(--bg-light);
+      color: var(--text-light);
+    }
+
+    body.light-mode header,
+    body.light-mode .rsa-window,
+    body.light-mode .chat-window,
+    body.light-mode .chat-box,
+    body.light-mode .rsa-step {
+      background: var(--card-light);
+      color: var(--text-light);
+    }
+
+    body.light-mode input,
+    body.light-mode select {
+      background: var(--input-light);
+      color: var(--text-light);
+    }
+
+    header {
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      color: white;
+      padding: 2rem;
+      text-align: center;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .toggle-dark {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #fff;
+      border: none;
+      border-radius: 20px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    section {
+      padding: 2rem 5%;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .rsa-step {
+      background: var(--card-dark);
+      border-left: 5px solid #2c5364;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      animation: revealStep 0.6s ease forwards;
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+
+    .rsa-window, .chat-window {
+      background: var(--card-dark);
+      border-radius: 15px;
+      padding: 2rem;
+      margin-top: 2rem;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 0.8rem;
+      border-radius: 10px;
+      border: 1px solid #444;
+      margin: 0.5rem 0;
+      font-size: 1rem;
+      background: var(--input-dark);
+      color: var(--text-dark);
+    }
+
+    button {
+      padding: 0.7rem 1.2rem;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--accent);
+      color: black;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 0.5rem;
+    }
+
+    .chat-box {
+      height: 250px;
+      overflow-y: auto;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 1rem;
+      background: var(--input-dark);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .message {
+      margin: 0.5rem 0;
+      padding: 0.5rem;
+      border-radius: 10px;
+      background: rgba(255,255,255,0.05);
+      animation: bubbleFade 0.5s ease forwards;
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    .adam {
+      background-color: #3b5998;
+      align-self: flex-start;
+    }
+
+    .eve {
+      background-color: #8e44ad;
+      align-self: flex-end;
+    }
+
+    .message .sender {
+      font-weight: bold;
+    }
+
+    .chat-input {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    @keyframes revealStep {
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes bubbleFade {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .footer-bar {
+      opacity: 0;
+      transform: translateY(40px);
+      background: #2c5364;
+      color: white;
+      padding: 1rem;
+      margin-top: 3rem;
+      text-align: center;
+      transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+    }
+
+    .footer-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .profile-pic {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      border: 2px solid #fff;
+      object-fit: cover;
+    }
+
+    .footer-bar a {
+      color: var(--accent);
+      margin: 0 0.5rem;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer-bar.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>RSA Chat Simulator with Encryption</h1>
+    <button class="toggle-dark" onclick="toggleDarkMode()">🌙</button>
+  </header>
+
+  <section>
+    <div id="rsaExplanation"></div>
+    <div class="rsa-window">
+      <h2>Encryption</h2>
+      <input type="text" id="plainText" placeholder="Enter message to encrypt">
+      <button onclick="encrypt()">Encrypt</button>
+      <p id="encryptedText"></p>
+    </div>
+    <div class="rsa-window">
+      <h2>Decryption</h2>
+      <input type="text" id="cipherText" placeholder="Enter encrypted message (space-separated)">
+      <button onclick="decrypt()">Decrypt</button>
+      <p id="decryptedText"></p>
+    </div>
+    <div class="chat-window">
+      <h2>Chat Simulation</h2>
+      <div class="chat-box" id="chatBox"></div>
+      <div class="chat-input">
+        <select id="userSelect">
+          <option value="adam">adam</option>
+          <option value="eve">eve</option>
+        </select>
+        <input type="text" id="chatInput" placeholder="Type a message...">
+        <button onclick="sendChat()">Send</button>
+      </div>
+    </div>
+  </section>
+
+  <footer id="footerBar" class="footer-bar">
+    <div class="footer-content">
+      <img src="myphoto.jpg" alt="Your Photo" class="profile-pic">
+      <div>
+        <p>Created by Harsh Kholwar</p>
+        <p>
+          <a href="https://www.instagram.com/_harsh_k_1012_/" target="_blank">📷 Instagram</a>
+          <a href="https://wa.me/7976283610" target="_blank">💬 WhatsApp</a>
+          <a href="https://github.com/yourprofile" target="_blank">💻 GitHub</a>
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    let p, q, n, phi, e, d;
+
+    function modPow(base, exponent, modulus) {
+      if (modulus === 1n) return 0n;
+      let result = 1n;
+      base %= modulus;
+      while (exponent > 0n) {
+        if (exponent % 2n === 1n) result = (result * base) % modulus;
+        exponent /= 2n;
+        base = (base * base) % modulus;
+      }
+      return result;
+    }
+
+    function gcd(a, b) {
+      while (b !== 0) [a, b] = [b, a % b];
+      return a;
+    }
+
+    function modInverse(a, m) {
+      for (let x = 1; x < m; x++) {
+        if ((a * x) % m === 1) return x;
+      }
+      return -1;
+    }
+
+    function isPrime(num) {
+      if (num < 2) return false;
+      for (let i = 2; i <= Math.sqrt(num); i++) {
+        if (num % i === 0) return false;
+      }
+      return true;
+    }
+
+    function generateKeys() {
+      do { p = Math.floor(Math.random() * 300 + 100); } while (!isPrime(p));
+      do { q = Math.floor(Math.random() * 300 + 100); } while (!isPrime(q) || q === p);
+      n = p * q;
+      phi = (p - 1) * (q - 1);
+      e = 3;
+      while (gcd(e, phi) !== 1) e += 2;
+      d = modInverse(e, phi);
+
+      const steps = [
+        `Chosen primes: p = ${p}, q = ${q}`,
+        `n = p × q = ${n}`,
+        `ϕ(n) = (p-1)(q-1) = ${phi}`,
+        `Choose e = ${e}, such that gcd(e, ϕ(n)) = 1`,
+        `Compute d such that (d × e) % ϕ(n) = 1 → d = ${d}`,
+        `Public key: (e=${e}, n=${n}), Private key: (d=${d}, n=${n})`
+      ];
+
+      const box = document.getElementById("rsaExplanation");
+      box.innerHTML = "";
+      steps.forEach((line, i) => {
+        const div = document.createElement("div");
+        div.className = "rsa-step";
+        div.style.animationDelay = `${i * 0.3}s`;
+        div.textContent = line;
+        box.appendChild(div);
+      });
+    }
+
+    function encrypt() {
+      const msg = document.getElementById("plainText").value.trim();
+      const result = Array.from(msg).map(c => modPow(BigInt(c.charCodeAt(0)), BigInt(e), BigInt(n)));
+      document.getElementById("encryptedText").textContent = "Encrypted: " + result.join(" ");
+    }
+
+    function decrypt() {
+      try {
+        const data = document.getElementById("cipherText").value.trim().split(" ").map(BigInt);
+        const message = data.map(c => String.fromCharCode(Number(modPow(c, BigInt(d), BigInt(n))))).join("");
+        document.getElementById("decryptedText").textContent = "Decrypted: " + message;
+      } catch {
+        document.getElementById("decryptedText").textContent = "Invalid input.";
+      }
+    }
+
+    function sendChat() {
+      const user = document.getElementById("userSelect").value;
+      const msg = document.getElementById("chatInput").value.trim();
+      if (!msg) return;
+
+      const encrypted = msg.split('').map(c => modPow(BigInt(c.charCodeAt(0)), BigInt(e), BigInt(n)));
+      const decrypted = encrypted.map(c => String.fromCharCode(Number(modPow(c, BigInt(d), BigInt(n))))).join("");
+
+      const bubble = document.createElement("div");
+      bubble.className = `message ${user.toLowerCase()}`;
+      bubble.innerHTML = `<div class='sender'>${user}</div>
+        Original: ${msg}<br>
+        Encrypted: ${encrypted.join(" ")}<br>
+        Decrypted: ${decrypted}`;
+      const box = document.getElementById("chatBox");
+      box.appendChild(bubble);
+      box.scrollTop = box.scrollHeight;
+      document.getElementById("chatInput").value = "";
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("light-mode");
+    }
+
+    const footer = document.getElementById("footerBar");
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        footer.classList.add("visible");
+      } else {
+        footer.classList.remove("visible");
+      }
+    }, { threshold: 0.5 });
+    observer.observe(footer);
+
+    generateKeys();
+  </script>
+</body>
+</html>
